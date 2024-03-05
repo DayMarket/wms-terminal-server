@@ -1,0 +1,8 @@
+app:
+  prefix: dev-
+
+wms:
+  oauth2:
+    authorization:
+      refreshTokenValidity: '864000'
+

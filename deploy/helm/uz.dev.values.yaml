@@ -1,0 +1,53 @@
+server:
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: 100m
+    limits:
+      cpu: 600m
+
+  postgres:
+    host: wms-db.master.dev.um.internal
+
+  config:
+    spring:
+      kafka:
+        secure: true
+        user: "wms-admin"
+        password: "pass"
+        bootstrapServers: rc1b-d20c7d92kjf928o1.mdb.yandexcloud.net:9092
+        security:
+          protocol: SASL_PLAINTEXT
+          saslProperties:
+            mechanism: SCRAM-SHA-512
+            jaasConfig: org.apache.kafka.common.security.scram.ScramLoginModule required username="%username%" password="%password%";
+    javaOpts: -Xmx600m
+    profiles: uz-dev
+    env:
+      configMap: { }
+      secret:
+        POS_SIGNATURE_PASSWORD: "from drone ci"
+        POS_SIGNATURE_SIGNER: "from drone ci"
+
+
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.allow-http: "false"
+      kubernetes.io/tls-acme: "true"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/affinity: "cookie"
+      nginx.ingress.kubernetes.io/session-cookie-name: "route"
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    className: nginx
+    tls:
+      - hosts:
+          - wms-api.dev.cluster.daymarket.uz
+        secretName: wms-gateway-ssl
+    rules:
+      - host: wms-api.dev.cluster.daymarket.uz
+        paths:
+          - path: /terminals
+            pathType: ImplementationSpecific
+            port: 80

@@ -1,0 +1,171 @@
+# Image pull policy. Possible values: Always, Never, IfNotPresent.
+pullPolicy: Always
+# Image pull secret name.
+pullSecret: ""
+
+# Repository information.
+repo:
+  # Repository name.
+  name: ""
+  # Repository branch on which the chart was built.
+  branch: ""
+  # Repository maintainer.
+  maintainer: "WMS"
+  # Last commit hash on which the chart was built.
+  lastCommitHash: ""
+
+# Alerts configuration.
+alerts:
+  # Slack channel for alerts.
+  slackChannel: "stream-wms"
+
+# Server configuration.
+server:
+  # Docker image of the server application.
+  image: "gcr.io/kazanexpress-184010/server:latest"
+
+  # The minimum number of replicas.
+  replicas: 1
+
+  # The resources allocated for each replica, both requests and limits.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 600m
+      memory: 1Gi
+
+  postgres:
+    database: delivery-point
+    serviceName: wms-delivery-point-service
+    port: 6432
+    prepareThreshold: 0
+    user: ""
+    password: ""
+    host: ""
+
+  config:
+    debug: true
+    logger:
+      level: info
+    # xmx must be lower than memory limit
+    javaOpts: -Xmx866m
+    
+    env:
+      configMap: { }
+      secret: { }
+
+  # API configuration.
+  api:
+    # Port configuration.
+    port:
+      # Port inside the container.
+      internal: 8080
+      # External service port.
+      external: 80
+
+  # Service configuration. Use for cluster migration.
+  service:
+    # Is service enabled?
+    enabled: true
+    nameOverride: wms-delivery-point-service
+
+  pods:
+    labels:
+      keep-logs: enabled
+      group: wms
+
+  # Monitoring configuration.
+  monitoring:
+    # Is monitoring enabled?
+    enabled: true
+    # Name of the service port this endpoint refers to.
+    port: "http"
+    # Metric scrape interval.
+    interval: 30s
+    # Scrape request path.
+    path: /actuator/prometheus
+    # Scrape request timeout.
+    scrapeTimeout: 5s
+    # HonorLabels chooses the metric’s labels on collisions with target labels.
+    honorLabels: true
+    # Additional monitoring labels.
+    additionalLabels:
+      prometheus: daily-prometheus
+      # prometheus: default # for delivery-point
+
+  # Probes configuration.
+  probes:
+    readiness:
+      httpGet:
+        path: /actuator/health
+        port: 8080
+      periodSeconds: 5
+      successThreshold: 3
+      failureThreshold: 2
+      initialDelaySeconds: 15
+    liveness:
+      httpGet:
+        port: 8080
+        path: /actuator/health/diskSpace
+      initialDelaySeconds: 180
+      timeoutSeconds: 1
+
+  # Tracing configuration.
+  tracing:
+    # Jaeger configuration.
+    jaeger:
+      # Inject Jaeger Agent sidecar?
+      injectAgent: false
+
+  # Ingress configuration.
+  ingress:
+    enabled: false
+    annotations:
+      kubernetes.io/ingress.allow-http: "false"
+      kubernetes.io/tls-acme: "true"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    className: nginx
+    tls:
+      - hosts:
+          - api.wms.kznexpress.ru
+        secretName: wms-api-prod-ssl
+    rules:
+      - host: api.wms.kznexpress.ru
+        paths:
+          - path: /api/example
+            pathType: ImplementationSpecific
+            port: 8080
+
+  # NodeSelector configuration of the validators.
+  nodeSelector:
+    app_type: apps
+
+  # Deployment affinity configuration. If not set the default one will be used.
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - wms-delivery-point-service
+            topologyKey: kubernetes.io/hostname
+
+
+  # Tolerations of the validators pods.
+  tolerations:
+    - key: app_type
+      effect: NoSchedule
+      operator: Equal
+      value: apps
+
+  # Annotations used in the server resources.
+  annotations: { }
+
+# Annotations used in all application resources.
+annotations: { }
