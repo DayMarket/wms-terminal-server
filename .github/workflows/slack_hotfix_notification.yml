@@ -1,0 +1,31 @@
+name: Slack hotfix notification
+
+on:
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  pr_opened_or_review_requested:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        id: extract_branch
+        run: |
+          echo "::set-output name=branch::$(basename ${{ github.event.pull_request.head.ref }})"
+
+      - name: Send Slack notification for PR approval
+        if: |
+          startsWith(github.event.pull_request.head.ref, 'hotfix') &&
+          github.event.pull_request.state == 'open'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: >
+            {
+              "attachments": [{
+                "text": "<!subteam^S04UMQ9BDPX>, *<https://kazanexpress.atlassian.net/browse/${{ steps.extract_branch.outputs.branch }}|HotFix>* ${{ steps.extract_branch.outputs.branch }}"
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_TEAM_QA_BACKEND_HOTFIX }}

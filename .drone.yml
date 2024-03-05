@@ -1,0 +1,376 @@
+kind: pipeline
+name: wms-terminal-server
+
+trigger:
+  event:
+    exclude:
+      - promote
+
+volumes:
+  - name: m2-cache
+    host:
+      path: /tmp/m2-cache-new
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+
+anchors:
+  - &mvn-step
+    image: ghcr.io/daymarket/maven:3.8.5-openjdk-17-v3
+    privileged: true
+    volumes:
+      - name: m2-cache
+        path: /root/.m2
+      - name: docker
+        path: /var/run/docker.sock
+    environment:
+      SERVER_USERNAME:
+        from_secret: nexus_maven_um_writer_username
+      SERVER_PASSWORD:
+        from_secret: nexus_maven_um_writer_password
+      READER_SERVER_USERNAME:
+        from_secret: nexus_maven_um_reader_username
+      READER_SERVER_PASSWORD:
+        from_secret: nexus_maven_um_reader_password
+      SONAR_HOST:
+        from_secret: um_sonar_host
+      SONAR_TOKEN:
+        from_secret: um_sonar_token
+      SONAR_PROJECT_NAME: wms-wms-terminal-server
+      GIT_PUSH_SSH_KEY:
+        from_secret: git_ssh_key
+
+build-slack-notification: &build-slack-notification
+  image: docker:git
+  environment:
+    PROJECT: project
+  commands:
+    - git fetch --tags
+    - PACKAGE_VERSION=$(git for-each-ref refs/tags --sort=-taggerdate --format='%(refname)' --count=1| awk -F '/' '{print $3}')
+    - |
+      echo "📁 *Project:* {{ repo.name }}" | tee -a slack.txt
+      echo "🏷 *Version:* <https://github.com/{{ repo.owner }}/{{ repo.name }}/releases/tag/$PACKAGE_VERSION|$PACKAGE_VERSION>" | tee -a slack.txt
+      echo "🏳 *Target:* $${PROJECT}" | tee -a slack.txt
+
+steps:
+  - name: enforce-snapshot-version
+    <<: *mvn-step
+    commands:
+      - mvn enforcer:enforce@snapshot-version
+    when:
+      branch:
+        - development
+
+  - name: prepare-deploy
+    <<: *mvn-step
+    commands:
+      - mkdir ~/.ssh/
+      - echo "$GIT_PUSH_SSH_KEY" > ~/.ssh/id_rsa
+      - eval `ssh-agent -s`
+      - chmod 400 ~/.ssh/id_rsa
+      - ssh-add ~/.ssh/id_rsa
+      - ssh-add -l
+      - git config --global user.email "${DRONE_COMMIT_AUTHOR_EMAIL}"
+      - git config --global user.name "${DRONE_COMMIT_AUTHOR}"
+      - ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+      - mvn -B -U versions:use-releases -DprocessParent=true
+      - mvn -B scm:checkin -Dmessage="[SKIP CI] Update dependency versions" -DpushChanges=false
+      - mvn -B -DskipTests -Darguments=-DskipTests release:prepare
+      - git fetch origin development
+      - git checkout development
+      - git merge master --no-ff --no-edit -m "Merge branch 'master' into development [skip ci]"
+      - git push
+    when:
+      branch:
+        - master
+      event:
+        - push
+
+  - name: build-and-test
+    <<: *mvn-step
+    commands:
+      - COMMIT_MESSAGE=$(echo $${DRONE_COMMIT_MESSAGE} | tr '[:upper:]' '[:lower:]')
+      - '[ -z "$${COMMIT_MESSAGE##*\[skip test\]*}" -o -z "$${COMMIT_MESSAGE##*\[test skip\]*}" ] && SKIP_TESTS=true || SKIP_TESTS=false'
+      - echo 'Skip tests' $SKIP_TESTS
+      - mvn verify -U -B -Dmaven.test.skip=$SKIP_TESTS
+    when:
+      ref:
+        - refs/heads/development
+        - refs/heads/master
+        - refs/pull/**
+
+  - name: tests
+    <<: *mvn-step
+    commands:
+      - mvn test -U -B
+    when:
+      branch:
+        - master
+      event:
+        - pull_request
+
+  - name: deploy to nexus
+    <<: *mvn-step
+    commands:
+      - mvn deploy -B -Dmaven.test.skip=true -Dmaven.install.skip=true -X
+    when:
+      ref:
+        - refs/heads/development
+        - refs/tags/*
+      event:
+        - push
+        - tag
+
+  - name: sonarqube PR
+    <<: *mvn-step
+    commands:
+      - >
+        mvn sonar:sonar 
+        -Dsonar.host.url=$SONAR_HOST 
+        -Dsonar.login=$SONAR_TOKEN 
+        -Dsonar.pullrequest.key=$DRONE_PULL_REQUEST 
+        -Dsonar.pullrequest.branch=$DRONE_SOURCE_BRANCH 
+        -Dsonar.pullrequest.base=$DRONE_TARGET_BRANCH 
+        -Dsonar.projectName=$SONAR_PROJECT_NAME
+    when:
+      event:
+        - pull_request
+      branch:
+        - development
+
+  - name: sonarqube branch
+    <<: *mvn-step
+    commands:
+      - >
+        mvn sonar:sonar 
+        -Dsonar.host.url=$SONAR_HOST 
+        -Dsonar.login=$SONAR_TOKEN 
+        -Dsonar.branch.name=$DRONE_COMMIT_BRANCH 
+        -Dsonar.projectName=$SONAR_PROJECT_NAME
+    when:
+      event:
+        - push
+      branch:
+        - development
+
+  - name: build slack notification KE
+    <<: *build-slack-notification
+    environment:
+      PROJECT: KE
+    when:
+      ref:
+        - refs/tags/*
+        - refs/heads/development
+      event:
+        - push
+        - tag
+
+  - name: slack
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: slack_releases_wms_releases
+      channel: wms-releases
+      template: "file:///drone/src/slack.txt"
+    when:
+      ref:
+        - refs/tags/*
+      event:
+        - push
+        - tag
+
+  - name: telegram_success
+    image: appleboy/drone-telegram
+    environment:
+      TELEGRAM_TOKEN:
+        from_secret: telegram_token
+      TELEGRAM_TO:
+        from_secret: telegram_to
+    when:
+      status:
+        - success
+      ref:
+        - refs/heads/development
+        - refs/tags/*
+    settings:
+      format: markdown
+      message: >
+        ⚙️ Status: build successful ✅
+        🔸 Repository: ${DRONE_REPO_NAME}
+        ☘️ Branch: ** ${DRONE_BRANCH} **
+        📌 Commit: [${DRONE_COMMIT_MESSAGE}](${DRONE_COMMIT_LINK})
+        🚀 Build URL: [build ${DRONE_BUILD_NUMBER}](${DRONE_BUILD_LINK})
+        👨‍💻  Author:  [@${DRONE_COMMIT_AUTHOR}](https://github.com/${DRONE_COMMIT_AUTHOR})
+
+  - name: telegram_failure
+    image: appleboy/drone-telegram
+    failure: ignored
+    environment:
+      TELEGRAM_TOKEN:
+        from_secret: telegram_token
+      TELEGRAM_TO:
+        from_secret: telegram_to
+    when:
+      status:
+        - failure
+      ref:
+        - refs/heads/development
+        - refs/tags/*
+    settings:
+      format: markdown
+      message: >
+        ⚙️ Status: build failed 🚨
+        🔸 Repository: ${DRONE_REPO_NAME}
+        ☘️ Branch: ** ${DRONE_BRANCH} **
+        📌 Commit: [${DRONE_COMMIT_MESSAGE}](${DRONE_COMMIT_LINK})
+        🚀 Build URL: [build ${DRONE_BUILD_NUMBER}](${DRONE_BUILD_LINK})
+        👨‍💻  Author:  [@${DRONE_COMMIT_AUTHOR}](https://github.com/${DRONE_COMMIT_AUTHOR})
+---
+
+kind: pipeline
+name: wms-delivery-point-service-um
+
+trigger:
+  event:
+    - promote
+  target:
+    - um-prod
+    - um-dev
+
+volumes:
+  - name: m2-cache
+    host:
+      path: /tmp/m2-cache-new
+  - name: docker
+    host:
+      path: /var/run/docker.sock
+
+anchors:
+  - &mvn-step
+    image: ghcr.io/daymarket/maven:3.8.5-openjdk-17-v3
+    privileged: true
+    volumes:
+      - name: m2-cache
+        path: /root/.m2
+      - name: docker
+        path: /var/run/docker.sock
+    environment:
+      SERVER_USERNAME:
+        from_secret: nexus_maven_um_writer_username
+      SERVER_PASSWORD:
+        from_secret: nexus_maven_um_writer_password
+      READER_SERVER_USERNAME:
+        from_secret: nexus_maven_um_reader_username
+      READER_SERVER_PASSWORD:
+        from_secret: nexus_maven_um_reader_password
+      SONAR_HOST:
+        from_secret: um_sonar_host
+      SONAR_TOKEN:
+        from_secret: um_sonar_token
+      SONAR_PROJECT_NAME: wms-wms-terminal-server
+      GIT_PUSH_SSH_KEY:
+        from_secret: git_ssh_key
+
+
+steps:
+  - name: build-and-test
+    <<: *mvn-step
+    commands:
+      - mvn package -U -B
+
+  - name: build and push image for UM
+    image: plugins/docker
+    settings:
+      username: json_key
+      registry: cr.yandex
+      password:
+        from_secret: um_yandex_cr_json_key
+      repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}'
+      use_cache: true
+      tags: ${DRONE_BUILD_NUMBER}
+      purge: false
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+
+  - name: helm deploy dev UM
+    image: alpine/helm
+    commands:
+      - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
+      - helm upgrade $${RELEASE_NAME} wms-common-chart
+        --namespace $${KUBE_NAMESPACE}
+        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --username "$${HELM_PULLER_USERNAME}"
+        --password "$${HELM_PULLER_PASSWORD}"
+        --version 0.1.2
+        --install
+        --atomic
+        --cleanup-on-fail
+        --values ./deploy/helm/values.yaml
+        --values ./deploy/helm/uz.values.yaml
+        --values ./deploy/helm/uz.dev.values.yaml
+        --set "repo.name=${DRONE_REPO_NAME}"
+        --set "repo.branch=${DRONE_COMMIT_BRANCH}"
+        --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
+        --set "server.image=$${IMAGE}"
+        --timeout 4m0s
+    environment:
+      RELEASE_NAME: ${DRONE_REPO_NAME}
+      KUBE_NAMESPACE: svc-wms
+      IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      HELM_KUBEAPISERVER:
+        from_secret: um_dev_cluster_kubernetes_server
+      HELM_KUBETOKEN:
+        from_secret: um_dev_cluster_kubernetes_token
+      HELM_CERT:
+        from_secret: um_dev_cluster_kubernetes_cert
+      HELM_KUBECAFILE: /tmp/ca.crt
+      HELM_PULLER_USERNAME:
+        from_secret: nexus_helm_puller_username
+      HELM_PULLER_PASSWORD:
+        from_secret: nexus_helm_puller_password
+    when:
+      target:
+        - um-dev
+
+  - name: helm prod deploy UM
+    image: alpine/helm
+    commands:
+      - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
+      - helm upgrade $${RELEASE_NAME} wms-common-chart
+        --namespace $${KUBE_NAMESPACE}
+        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --username "$${HELM_PULLER_USERNAME}"
+        --password "$${HELM_PULLER_PASSWORD}"
+        --version 0.1.2
+        --install
+        --atomic
+        --cleanup-on-fail
+        --create-namespace
+        --values ./deploy/helm/values.yaml
+        --values ./deploy/helm/uz.values.yaml
+        --values ./deploy/helm/uz.prod.values.yaml
+        --set "repo.name=${DRONE_REPO_NAME}"
+        --set "repo.branch=${DRONE_COMMIT_BRANCH}"
+        --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
+        --set "server.image=$${IMAGE}"
+        --timeout 15m0s
+    environment:
+      RELEASE_NAME: ${DRONE_REPO_NAME}
+      KUBE_NAMESPACE: svc-wms
+      IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      HELM_KUBEAPISERVER:
+        from_secret: um_prod_cluster_kubernetes_server
+      HELM_KUBETOKEN:
+        from_secret: um_prod_cluster_kubernetes_token
+      HELM_CERT:
+        from_secret: um_prod_cluster_kubernetes_cert
+      HELM_KUBECAFILE: /tmp/ca.crt
+      HELM_PULLER_USERNAME:
+        from_secret: nexus_helm_puller_username
+      HELM_PULLER_PASSWORD:
+        from_secret: nexus_helm_puller_password
+    when:
+      target:
+        - um-prod
+
