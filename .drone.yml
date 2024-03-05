@@ -1,5 +1,7 @@
 kind: pipeline
 name: wms-terminal-server
+node:
+  type: "um-common"
 
 trigger:
   event:
@@ -152,6 +154,113 @@ steps:
         - push
       branch:
         - development
+
+  - name: build and push image for UM
+    image: plugins/docker
+    settings:
+      username: json_key
+      registry: cr.yandex
+      password:
+        from_secret: um_yandex_cr_json_key
+      repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}'
+      use_cache: true
+      tags: ${DRONE_BUILD_NUMBER}
+      purge: false
+    volumes:
+      - name: docker
+        path: /var/run/docker.sock
+    when:
+      event:
+        - push
+      branch:
+        - development
+        - master
+
+  - name: helm deploy dev UM
+    image: alpine/helm
+    commands:
+      - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
+      - helm upgrade $${RELEASE_NAME} wms-common-chart
+        --namespace $${KUBE_NAMESPACE}
+        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --username "$${HELM_PULLER_USERNAME}"
+        --password "$${HELM_PULLER_PASSWORD}"
+        --version 0.1.2
+        --install
+        --atomic
+        --cleanup-on-fail
+        --values ./deploy/helm/values.yaml
+        --values ./deploy/helm/uz.values.yaml
+        --values ./deploy/helm/uz.dev.values.yaml
+        --set "repo.name=${DRONE_REPO_NAME}"
+        --set "repo.branch=${DRONE_COMMIT_BRANCH}"
+        --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
+        --set "server.image=$${IMAGE}"
+        --timeout 4m0s
+    environment:
+      RELEASE_NAME: ${DRONE_REPO_NAME}
+      KUBE_NAMESPACE: svc-wms
+      IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      HELM_KUBEAPISERVER:
+        from_secret: um_dev_cluster_kubernetes_server
+      HELM_KUBETOKEN:
+        from_secret: um_dev_cluster_kubernetes_token
+      HELM_CERT:
+        from_secret: um_dev_cluster_kubernetes_cert
+      HELM_KUBECAFILE: /tmp/ca.crt
+      HELM_PULLER_USERNAME:
+        from_secret: nexus_helm_puller_username
+      HELM_PULLER_PASSWORD:
+        from_secret: nexus_helm_puller_password
+    when:
+      event:
+        - push
+      branch:
+        - development
+
+
+  - name: helm prod deploy UM
+    image: alpine/helm
+    commands:
+      - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
+      - helm upgrade $${RELEASE_NAME} wms-common-chart
+        --namespace $${KUBE_NAMESPACE}
+        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --username "$${HELM_PULLER_USERNAME}"
+        --password "$${HELM_PULLER_PASSWORD}"
+        --version 0.1.2
+        --install
+        --atomic
+        --cleanup-on-fail
+        --create-namespace
+        --values ./deploy/helm/values.yaml
+        --values ./deploy/helm/uz.values.yaml
+        --values ./deploy/helm/uz.prod.values.yaml
+        --set "repo.name=${DRONE_REPO_NAME}"
+        --set "repo.branch=${DRONE_COMMIT_BRANCH}"
+        --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
+        --set "server.image=$${IMAGE}"
+        --timeout 15m0s
+    environment:
+      RELEASE_NAME: ${DRONE_REPO_NAME}
+      KUBE_NAMESPACE: svc-wms
+      IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      HELM_KUBEAPISERVER:
+        from_secret: um_prod_cluster_kubernetes_server
+      HELM_KUBETOKEN:
+        from_secret: um_prod_cluster_kubernetes_token
+      HELM_CERT:
+        from_secret: um_prod_cluster_kubernetes_cert
+      HELM_KUBECAFILE: /tmp/ca.crt
+      HELM_PULLER_USERNAME:
+        from_secret: nexus_helm_puller_username
+      HELM_PULLER_PASSWORD:
+        from_secret: nexus_helm_puller_password
+    when:
+      event:
+        - push
+      branch:
+        - master
 
   - name: build slack notification KE
     <<: *build-slack-notification
