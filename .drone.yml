@@ -38,7 +38,7 @@ anchors:
         from_secret: um_sonar_host
       SONAR_TOKEN:
         from_secret: um_sonar_token
-      SONAR_PROJECT_NAME: wms-wms-terminal-server
+      SONAR_PROJECT_NAME: wms-terminal-server
       GIT_PUSH_SSH_KEY:
         from_secret: git_ssh_key
 
