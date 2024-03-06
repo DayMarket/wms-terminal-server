@@ -209,9 +209,9 @@ steps:
         from_secret: um_dev_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-        from_secret: nexus_helm_puller_username
+nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
-        from_secret: nexus_helm_puller_password
+        from_secret: nexus_helm_um_reader_password
     when:
       event:
         - push
@@ -253,9 +253,9 @@ steps:
         from_secret: um_prod_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-        from_secret: nexus_helm_puller_username
+nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
-        from_secret: nexus_helm_puller_password
+        from_secret: nexus_helm_um_reader_password
     when:
       event:
         - push
@@ -435,9 +435,9 @@ steps:
         from_secret: um_dev_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-        from_secret: nexus_helm_puller_username
+nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
-        from_secret: nexus_helm_puller_password
+        from_secret: nexus_helm_um_reader_password
     when:
       target:
         - um-dev
@@ -476,9 +476,9 @@ steps:
         from_secret: um_prod_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-        from_secret: nexus_helm_puller_username
+nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
-        from_secret: nexus_helm_puller_password
+        from_secret: nexus_helm_um_reader_password
     when:
       target:
         - um-prod
