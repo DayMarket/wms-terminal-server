@@ -182,7 +182,7 @@ steps:
       - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
       - helm upgrade $${RELEASE_NAME} wms-common-chart
         --namespace $${KUBE_NAMESPACE}
-        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --repo "https://nexus.infra.cluster.daymarket.uz/repository/helm-museum/"
         --username "$${HELM_PULLER_USERNAME}"
         --password "$${HELM_PULLER_PASSWORD}"
         --version 0.1.2
@@ -225,7 +225,7 @@ steps:
       - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
       - helm upgrade $${RELEASE_NAME} wms-common-chart
         --namespace $${KUBE_NAMESPACE}
-        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --repo "https://nexus.infra.cluster.daymarket.uz/repository/helm-museum/"
         --username "$${HELM_PULLER_USERNAME}"
         --password "$${HELM_PULLER_PASSWORD}"
         --version 0.1.2
@@ -408,7 +408,7 @@ steps:
       - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
       - helm upgrade $${RELEASE_NAME} wms-common-chart
         --namespace $${KUBE_NAMESPACE}
-        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --repo "https://nexus.infra.cluster.daymarket.uz/repository/helm-museum/"
         --username "$${HELM_PULLER_USERNAME}"
         --password "$${HELM_PULLER_PASSWORD}"
         --version 0.1.2
@@ -448,7 +448,7 @@ steps:
       - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
       - helm upgrade $${RELEASE_NAME} wms-common-chart
         --namespace $${KUBE_NAMESPACE}
-        --repo "https://nexus.infra.cluster.kznexpess.com/repository/helm-museum/"
+        --repo "https://nexus.infra.cluster.daymarket.uz/repository/helm-museum/"
         --username "$${HELM_PULLER_USERNAME}"
         --password "$${HELM_PULLER_PASSWORD}"
         --version 0.1.2
