@@ -162,7 +162,7 @@ steps:
       registry: cr.yandex
       password:
         from_secret: yandex_cr_json_key
-      repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}'
+      repo: "cr.yandex/umarket/${DRONE_REPO_NAME}"
       use_cache: true
       tags: ${DRONE_BUILD_NUMBER}
       purge: false
@@ -209,7 +209,7 @@ steps:
         from_secret: um_dev_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-nexus_helm_um_reader_username
+        from_secret: nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
         from_secret: nexus_helm_um_reader_password
     when:
@@ -217,7 +217,6 @@ nexus_helm_um_reader_username
         - push
       branch:
         - development
-
 
   - name: helm prod deploy UM
     image: alpine/helm
@@ -253,7 +252,7 @@ nexus_helm_um_reader_username
         from_secret: um_prod_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-nexus_helm_um_reader_username
+        from_secret: nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
         from_secret: nexus_helm_um_reader_password
     when:
@@ -335,7 +334,6 @@ nexus_helm_um_reader_username
         🚀 Build URL: [build ${DRONE_BUILD_NUMBER}](${DRONE_BUILD_LINK})
         👨‍💻  Author:  [@${DRONE_COMMIT_AUTHOR}](https://github.com/${DRONE_COMMIT_AUTHOR})
 ---
-
 kind: pipeline
 name: wms-delivery-point-service-um
 
@@ -380,7 +378,6 @@ anchors:
       GIT_PUSH_SSH_KEY:
         from_secret: git_ssh_key
 
-
 steps:
   - name: build-and-test
     <<: *mvn-step
@@ -394,7 +391,7 @@ steps:
       registry: cr.yandex
       password:
         from_secret: um_yandex_cr_json_key
-      repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}'
+      repo: "cr.yandex/umarket/${DRONE_REPO_NAME}"
       use_cache: true
       tags: ${DRONE_BUILD_NUMBER}
       purge: false
@@ -435,7 +432,7 @@ steps:
         from_secret: um_dev_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-nexus_helm_um_reader_username
+        from_secret: nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
         from_secret: nexus_helm_um_reader_password
     when:
@@ -476,10 +473,9 @@ nexus_helm_um_reader_username
         from_secret: um_prod_cluster_kubernetes_cert
       HELM_KUBECAFILE: /tmp/ca.crt
       HELM_PULLER_USERNAME:
-nexus_helm_um_reader_username
+        from_secret: nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
         from_secret: nexus_helm_um_reader_password
     when:
       target:
         - um-prod
-
