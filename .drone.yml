@@ -161,7 +161,7 @@ steps:
       username: json_key
       registry: cr.yandex
       password:
-        from_secret: um_yandex_cr_json_key
+        from_secret: yandex_cr_json_key
       repo: 'cr.yandex/umarket/${DRONE_REPO_NAME}'
       use_cache: true
       tags: ${DRONE_BUILD_NUMBER}
