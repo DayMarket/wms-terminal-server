@@ -415,6 +415,8 @@ steps:
         --values ./deploy/helm/values.yaml
         --values ./deploy/helm/uz.values.yaml
         --values ./deploy/helm/uz.dev.values.yaml
+        --set "server.postgres.user=$${POSTGRES_USER}"
+        --set "server.postgres.password=$${POSTGRES_PASSWORD}"
         --set "repo.name=${DRONE_REPO_NAME}"
         --set "repo.branch=${DRONE_COMMIT_BRANCH}"
         --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
@@ -424,6 +426,10 @@ steps:
       RELEASE_NAME: ${DRONE_REPO_NAME}
       KUBE_NAMESPACE: svc-wms
       IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      POSTGRES_USER:
+        from_secret: um_dev_postgres_user
+      POSTGRES_PASSWORD:
+        from_secret: um_dev_postgres_password
       HELM_KUBEAPISERVER:
         from_secret: um_dev_cluster_kubernetes_server
       HELM_KUBETOKEN:
@@ -456,6 +462,8 @@ steps:
         --values ./deploy/helm/values.yaml
         --values ./deploy/helm/uz.values.yaml
         --values ./deploy/helm/uz.prod.values.yaml
+        --set "server.postgres.user=$${POSTGRES_USER}"
+        --set "server.postgres.password=$${POSTGRES_PASSWORD}"
         --set "repo.name=${DRONE_REPO_NAME}"
         --set "repo.branch=${DRONE_COMMIT_BRANCH}"
         --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
@@ -465,6 +473,10 @@ steps:
       RELEASE_NAME: ${DRONE_REPO_NAME}
       KUBE_NAMESPACE: svc-wms
       IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      POSTGRES_USER:
+        from_secret: um_prod_postgres_user
+      POSTGRES_PASSWORD:
+        from_secret: um_prod_postgres_password
       HELM_KUBEAPISERVER:
         from_secret: um_prod_cluster_kubernetes_server
       HELM_KUBETOKEN:

@@ -1,6 +1,10 @@
 app:
   prefix: dev-
 
+spring:
+  datasource:
+    url: jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ApplicationName=${SPRING_DATASOURCE_SERVICE_NAME}&prepareThreshold=${SPRING_DATASOURCE_PREPARE_THRESHOLD}
+
 wms:
   oauth2:
     authorization:
