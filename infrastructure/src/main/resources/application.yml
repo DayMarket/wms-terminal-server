@@ -1,25 +1,25 @@
 spring:
   app:
     prefix: ~
-#  datasource:
-#    url: "***URL***"
-#    username: ${SPRING_DATASOURCE_USERNAME}
-#    password: ${SPRING_DATASOURCE_PASSWORD}
-#    type: com.zaxxer.hikari.HikariDataSource
-#    driver-class-name: org.postgresql.Driver
-#    hikari:
-#      data-source-properties: readOnlyMode=ignore
-#      maximum-pool-size: ${SPRING_DATASOURCE_HIKARY_MAX:10}
-#  liquibase:
-#    enabled: true
-#    default-schema: public
-#    change-log: classpath*:db/changelog-master.xml
-#
-#mybatis:
-#  mapper-locations: classpath*:dao/*.xml
-#  type-handlers-package: com.kazanexpress.wms.deliverypoint
-#  configuration:
-#    map-underscore-to-camel-case: true
+  datasource:
+    url: "***URL***"
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      data-source-properties: readOnlyMode=ignore
+      maximum-pool-size: ${SPRING_DATASOURCE_HIKARY_MAX:10}
+  liquibase:
+    enabled: true
+    default-schema: public
+    change-log: classpath*:db/changelog-master.xml
+
+mybatis:
+  mapper-locations: classpath*:dao/*.xml
+  type-handlers-package: com.kazanexpress.wms.deliverypoint
+  configuration:
+    map-underscore-to-camel-case: true
 
 wms:
   oauth2:

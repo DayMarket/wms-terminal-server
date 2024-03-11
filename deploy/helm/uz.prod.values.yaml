@@ -26,9 +26,6 @@ server:
             jaasConfig: org.apache.kafka.common.security.scram.ScramLoginModule required username="%username%" password="%password%";
     env:
       configMap: { }
-      secret:
-        POS_SIGNATURE_PASSWORD: "from drone ci"
-        POS_SIGNATURE_SIGNER: "from drone ci"
 
   monitoring:
     additionalLabels:

@@ -26,9 +26,6 @@ server:
     profiles: uz-dev
     env:
       configMap: { }
-      secret:
-        POS_SIGNATURE_PASSWORD: "from drone ci"
-        POS_SIGNATURE_SIGNER: "from drone ci"
 
 
   ingress:

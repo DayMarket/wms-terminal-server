@@ -37,7 +37,7 @@ server:
       memory: 1Gi
 
   postgres:
-    database: delivery-point
+    database: terminal
     serviceName: wms-terminal-server
     port: 6432
     prepareThreshold: 0
