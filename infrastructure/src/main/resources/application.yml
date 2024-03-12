@@ -2,7 +2,7 @@ spring:
   app:
     prefix: ~
   datasource:
-    url: "***URL***"
+    url: jdbc:postgresql://${SPRING_DATASOURCE_HOST}:${SPRING_DATASOURCE_PORT}/${SPRING_DATASOURCE_DATABASE}?ApplicationName=${SPRING_DATASOURCE_SERVICE_NAME}&prepareThreshold=${SPRING_DATASOURCE_PREPARE_THRESHOLD}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     type: com.zaxxer.hikari.HikariDataSource
@@ -17,7 +17,7 @@ spring:
 
 mybatis:
   mapper-locations: classpath*:dao/*.xml
-  type-handlers-package: com.kazanexpress.wms.deliverypoint
+  type-handlers-package: com.kazanexpress.wms.terminal.server
   configuration:
     map-underscore-to-camel-case: true
 

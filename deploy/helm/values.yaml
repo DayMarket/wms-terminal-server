@@ -93,7 +93,6 @@ server:
     # Additional monitoring labels.
     additionalLabels:
       prometheus: daily-prometheus
-      # prometheus: default # for delivery-point
 
   # Probes configuration.
   probes:

@@ -192,6 +192,8 @@ steps:
         --values ./deploy/helm/values.yaml
         --values ./deploy/helm/uz.values.yaml
         --values ./deploy/helm/uz.dev.values.yaml
+        --set "server.postgres.user=$${POSTGRES_USER}"
+        --set "server.postgres.password=$${POSTGRES_PASSWORD}"
         --set "repo.name=${DRONE_REPO_NAME}"
         --set "repo.branch=${DRONE_COMMIT_BRANCH}"
         --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
@@ -201,6 +203,10 @@ steps:
       RELEASE_NAME: ${DRONE_REPO_NAME}
       KUBE_NAMESPACE: svc-wms
       IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      POSTGRES_USER:
+        from_secret: um_dev_postgres_user
+      POSTGRES_PASSWORD:
+        from_secret: um_dev_postgres_password
       HELM_KUBEAPISERVER:
         from_secret: um_dev_cluster_kubernetes_server
       HELM_KUBETOKEN:
@@ -235,6 +241,8 @@ steps:
         --values ./deploy/helm/values.yaml
         --values ./deploy/helm/uz.values.yaml
         --values ./deploy/helm/uz.prod.values.yaml
+        --set "server.postgres.user=$${POSTGRES_USER}"
+        --set "server.postgres.password=$${POSTGRES_PASSWORD}"
         --set "repo.name=${DRONE_REPO_NAME}"
         --set "repo.branch=${DRONE_COMMIT_BRANCH}"
         --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
@@ -244,6 +252,10 @@ steps:
       RELEASE_NAME: ${DRONE_REPO_NAME}
       KUBE_NAMESPACE: svc-wms
       IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
+      POSTGRES_USER:
+        from_secret: um_prod_postgres_user
+      POSTGRES_PASSWORD:
+        from_secret: um_prod_postgres_password
       HELM_KUBEAPISERVER:
         from_secret: um_prod_cluster_kubernetes_server
       HELM_KUBETOKEN:
@@ -333,161 +345,3 @@ steps:
         📌 Commit: [${DRONE_COMMIT_MESSAGE}](${DRONE_COMMIT_LINK})
         🚀 Build URL: [build ${DRONE_BUILD_NUMBER}](${DRONE_BUILD_LINK})
         👨‍💻  Author:  [@${DRONE_COMMIT_AUTHOR}](https://github.com/${DRONE_COMMIT_AUTHOR})
----
-kind: pipeline
-name: wms-terminal-server-um
-
-trigger:
-  event:
-    - promote
-  target:
-    - um-prod
-    - um-dev
-
-volumes:
-  - name: m2-cache
-    host:
-      path: /tmp/m2-cache-new
-  - name: docker
-    host:
-      path: /var/run/docker.sock
-
-anchors:
-  - &mvn-step
-    image: ghcr.io/daymarket/maven:3.8.5-openjdk-17-v3
-    privileged: true
-    volumes:
-      - name: m2-cache
-        path: /root/.m2
-      - name: docker
-        path: /var/run/docker.sock
-    environment:
-      SERVER_USERNAME:
-        from_secret: nexus_maven_um_writer_username
-      SERVER_PASSWORD:
-        from_secret: nexus_maven_um_writer_password
-      READER_SERVER_USERNAME:
-        from_secret: nexus_maven_um_reader_username
-      READER_SERVER_PASSWORD:
-        from_secret: nexus_maven_um_reader_password
-      SONAR_HOST:
-        from_secret: um_sonar_host
-      SONAR_TOKEN:
-        from_secret: um_sonar_token
-      SONAR_PROJECT_NAME: wms-terminal-server
-      GIT_PUSH_SSH_KEY:
-        from_secret: git_ssh_key
-
-steps:
-  - name: build-and-test
-    <<: *mvn-step
-    commands:
-      - mvn package -U -B
-
-  - name: build and push image for UM
-    image: plugins/docker
-    settings:
-      username: json_key
-      registry: cr.yandex
-      password:
-        from_secret: um_yandex_cr_json_key
-      repo: "cr.yandex/umarket/${DRONE_REPO_NAME}"
-      use_cache: true
-      tags: ${DRONE_BUILD_NUMBER}
-      purge: false
-    volumes:
-      - name: docker
-        path: /var/run/docker.sock
-
-  - name: helm deploy dev UM
-    image: alpine/helm
-    commands:
-      - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
-      - helm upgrade $${RELEASE_NAME} wms-common-chart
-        --namespace $${KUBE_NAMESPACE}
-        --repo "https://nexus.infra.cluster.daymarket.uz/repository/helm-museum/"
-        --username "$${HELM_PULLER_USERNAME}"
-        --password "$${HELM_PULLER_PASSWORD}"
-        --version 0.1.2
-        --install
-        --atomic
-        --cleanup-on-fail
-        --values ./deploy/helm/values.yaml
-        --values ./deploy/helm/uz.values.yaml
-        --values ./deploy/helm/uz.dev.values.yaml
-        --set "server.postgres.user=$${POSTGRES_USER}"
-        --set "server.postgres.password=$${POSTGRES_PASSWORD}"
-        --set "repo.name=${DRONE_REPO_NAME}"
-        --set "repo.branch=${DRONE_COMMIT_BRANCH}"
-        --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
-        --set "server.image=$${IMAGE}"
-        --timeout 4m0s
-    environment:
-      RELEASE_NAME: ${DRONE_REPO_NAME}
-      KUBE_NAMESPACE: svc-wms
-      IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
-      POSTGRES_USER:
-        from_secret: um_dev_postgres_user
-      POSTGRES_PASSWORD:
-        from_secret: um_dev_postgres_password
-      HELM_KUBEAPISERVER:
-        from_secret: um_dev_cluster_kubernetes_server
-      HELM_KUBETOKEN:
-        from_secret: um_dev_cluster_kubernetes_token
-      HELM_CERT:
-        from_secret: um_dev_cluster_kubernetes_cert
-      HELM_KUBECAFILE: /tmp/ca.crt
-      HELM_PULLER_USERNAME:
-        from_secret: nexus_helm_um_reader_username
-      HELM_PULLER_PASSWORD:
-        from_secret: nexus_helm_um_reader_password
-    when:
-      target:
-        - um-dev
-
-  - name: helm prod deploy UM
-    image: alpine/helm
-    commands:
-      - echo $${HELM_CERT} | base64 -d > $${HELM_KUBECAFILE}
-      - helm upgrade $${RELEASE_NAME} wms-common-chart
-        --namespace $${KUBE_NAMESPACE}
-        --repo "https://nexus.infra.cluster.daymarket.uz/repository/helm-museum/"
-        --username "$${HELM_PULLER_USERNAME}"
-        --password "$${HELM_PULLER_PASSWORD}"
-        --version 0.1.2
-        --install
-        --atomic
-        --cleanup-on-fail
-        --create-namespace
-        --values ./deploy/helm/values.yaml
-        --values ./deploy/helm/uz.values.yaml
-        --values ./deploy/helm/uz.prod.values.yaml
-        --set "server.postgres.user=$${POSTGRES_USER}"
-        --set "server.postgres.password=$${POSTGRES_PASSWORD}"
-        --set "repo.name=${DRONE_REPO_NAME}"
-        --set "repo.branch=${DRONE_COMMIT_BRANCH}"
-        --set "repo.lastCommitHash=${DRONE_COMMIT_SHA:0:7}"
-        --set "server.image=$${IMAGE}"
-        --timeout 15m0s
-    environment:
-      RELEASE_NAME: ${DRONE_REPO_NAME}
-      KUBE_NAMESPACE: svc-wms
-      IMAGE: "cr.yandex/umarket/${DRONE_REPO_NAME}:${DRONE_BUILD_NUMBER}"
-      POSTGRES_USER:
-        from_secret: um_prod_postgres_user
-      POSTGRES_PASSWORD:
-        from_secret: um_prod_postgres_password
-      HELM_KUBEAPISERVER:
-        from_secret: um_prod_cluster_kubernetes_server
-      HELM_KUBETOKEN:
-        from_secret: um_prod_cluster_kubernetes_token
-      HELM_CERT:
-        from_secret: um_prod_cluster_kubernetes_cert
-      HELM_KUBECAFILE: /tmp/ca.crt
-      HELM_PULLER_USERNAME:
-        from_secret: nexus_helm_um_reader_username
-      HELM_PULLER_PASSWORD:
-        from_secret: nexus_helm_um_reader_password
-    when:
-      target:
-        - um-prod
