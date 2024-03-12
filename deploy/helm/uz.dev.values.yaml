@@ -9,6 +9,8 @@ server:
 
   postgres:
     host: wms-db.master.dev.um.internal
+    database: terminal
+    port: 6432
 
   config:
     spring:
