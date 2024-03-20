@@ -218,6 +218,10 @@ steps:
         from_secret: nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
         from_secret: nexus_helm_um_reader_password
+      NEXUS_USERNAME:
+        from_secret: nexus_maven_um_writer_username
+      NEXUS_PASSWORD:
+        from_secret: nexus_maven_um_writer_password
     when:
       event:
         - push
@@ -267,6 +271,10 @@ steps:
         from_secret: nexus_helm_um_reader_username
       HELM_PULLER_PASSWORD:
         from_secret: nexus_helm_um_reader_password
+      NEXUS_USERNAME:
+        from_secret: nexus_maven_um_writer_username
+      NEXUS_PASSWORD:
+        from_secret: nexus_maven_um_writer_password
     when:
       event:
         - push
