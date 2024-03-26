@@ -22,6 +22,13 @@ mybatis:
     map-underscore-to-camel-case: true
 
 wms:
+  nexus:
+    url: https://nexus.infra.cluster.daymarket.uz/
+    username: ${NEXUS_USERNAME}
+    password: ${NEXUS_PASSWORD}
+    repository-name: maven-releases
+    group-id: com.kazanexpress.wms.terminal
+    artifact-id: driver
   oauth2:
     enable-authentication: true
     token-service-address: http://account
