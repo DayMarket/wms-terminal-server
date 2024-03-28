@@ -29,6 +29,7 @@ wms:
     repository-name: maven-releases
     group-id: com.kazanexpress.wms.terminal
     artifact-id: driver
+    extension: jar
   oauth2:
     enable-authentication: true
     token-service-address: http://account

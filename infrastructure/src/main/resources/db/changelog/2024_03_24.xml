@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+
+    <changeSet id="driver.create_table" author="Victor Suchilin">
+        <sql>
+            create table if not exists driver
+            (
+                id                  uuid not null primary key default gen_random_uuid(),
+                created_timestamp   timestamp default current_timestamp not null,
+                group_name          varchar not null,
+                name                varchar not null,
+                version             bigserial not null,
+                worker_id           bigint,
+                extension           varchar not null,
+                enabled             boolean not null
+                );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

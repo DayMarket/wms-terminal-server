@@ -1,8 +1,8 @@
 package com.kazanexpress.wms.terminal.server.rest;
 
 
-import com.kazanexpress.wms.terminal.server.client.NexusClient;
 import com.kazanexpress.wms.terminal.server.client.NexusAssetSearchResponse;
+import com.kazanexpress.wms.terminal.server.client.NexusFeignClient;
 import feign.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -35,7 +35,7 @@ public class TestController {
     @Value("${wms.nexus.artifact-id}")
     private String name;
 
-    private final NexusClient nexusClient;
+    private final NexusFeignClient nexusClient;
 
     @GetMapping
     public NexusAssetSearchResponse get(@RequestParam String version) {
