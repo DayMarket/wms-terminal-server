@@ -1,6 +1,7 @@
 package com.kazanexpress.wms.terminal.server.client;
 
 
+import com.kazanexpress.wms.terminal.server.repository.NexusClient;
 import feign.Response;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 @FeignClient(url = "${wms.nexus.url}", name = "nexus-client", configuration = FeignConfig.class)
-public interface NexusClient {
+public interface NexusFeignClient extends NexusClient {
 
     @GetMapping("/service/rest/v1/search/assets")
     NexusAssetSearchResponse search(@RequestParam String repository,
@@ -33,7 +34,7 @@ public interface NexusClient {
     );
 
     @PostMapping(value = "/service/rest/v1/components",
-            consumes =  MULTIPART_FORM_DATA_VALUE)
+            consumes = MULTIPART_FORM_DATA_VALUE)
     String upload(@RequestParam(required = false) String repository,
                   @RequestPart("maven2.generate-pom") boolean generatePom,
                   @RequestPart("maven2.groupId") String groupId,
@@ -41,5 +42,5 @@ public interface NexusClient {
                   @RequestPart("version") String version,
                   @RequestPart("maven2.asset1") MultipartFile file,
                   @RequestPart("maven2.asset1.extension") String extension
-                  );
+    );
 }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kazanexpress.wms.terminal.server.repository.dao.DriverDao">
+
+    <select id="insert" resultMap="driverResultMap">
+        insert into driver (group_name,
+                            name,
+                            version,
+                            worker_id,
+                            extension,
+                            enabled)
+        values (#{driver.groupName},
+                #{driver.name},
+                #{driver.version},
+                #{driver.workerId},
+                #{driver.extension},
+                #{driver.enabled})
+            returning *
+    </select>
+
+    <resultMap id="driverResultMap"
+               type="com.kazanexpress.wms.terminal.server.Driver">
+        <constructor>
+            <idArg name="id" column="id"/>
+            <arg name="createdTimestamp" column="created_timestamp"/>
+            <arg name="groupName" column="group_name"/>
+            <arg name="name" column="name"/>
+            <arg name="version" column="version"/>
+            <arg name="workerId" column="worker_id"/>
+            <arg name="extension" column="extension"/>
+            <arg name="enabled" column="enabled"/>
+        </constructor>
+    </resultMap>
+</mapper>
